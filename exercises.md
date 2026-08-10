@@ -65,7 +65,8 @@ Sửa một ký tự trong `app/main.py` rồi build lại. Với Dockerfile c�
 layer nào được dùng lại từ cache, layer nào phải chạy lại? Nếu bạn đặt
 `COPY . .` lên trước `RUN pip install` thì kết quả khác thế nào?
 
-> *Câu trả lời của bạn*
+- **Khi sửa 1 ký tự trong `app/main.py`**: Tất cả các layer trước `COPY . .` (bao gồm `FROM`, `WORKDIR`, `COPY requirements.txt .`, `RUN pip install`) đều được dùng lại 100% từ cache. Chỉ riêng từ layer `COPY . .` trở đi mới phải thực hiện lại (chỉ mất chưa tới 1 giây).
+- **Nếu đặt `COPY . .` lên trước `RUN pip install`**: Mỗi lần sửa dù chỉ 1 dòng code Python, layer `COPY . .` sẽ làm phá vỡ (invalidate) cache của tất cả các lệnh đứng sau nó. Kết quả là Docker buộc phải chạy lại toàn bộ bước `RUN pip install` tốn rất nhiều thời gian và băng thông để tải và cài đặt lại các thư viện.
 
 ---
 
@@ -75,7 +76,11 @@ Container mặc định chạy bằng root. Mô tả chuỗi sự kiện dẫn t
 trong code Python của bạn" tới "kẻ tấn công có quyền cao trên máy host", và
 lệnh `USER` cắt đứt chuỗi đó ở chỗ nào.
 
-> *Câu trả lời của bạn*
+- **Chuỗi sự kiện tấn công**:
+  1. Kẻ tấn công khai thác một lỗ hổng trong ứng dụng Python (như RCE, Arbitrary File Write).
+  2. Vì container chạy bằng user `root`, tiến trình Python sở hữu đầy đủ quyền root bên trong container (UID 0).
+  3. Kẻ tấn công lợi dụng lỗ hổng thoát khỏi container (Container Escape) để thâm nhập vào máy host. Do UID trong container là 0, khi sang máy host họ vẫn mang UID 0 và trở thành `root` trên OS máy host.
+- **Lệnh `USER` cắt đứt ở đâu**: Lệnh `USER appuser` hạ quyền tiến trình xuống một user thường không có đặc quyền. Khi ứng dụng bị thâm nhập, kẻ tấn công chỉ có quyền hạn hạn chế của `appuser`. Dù có tìm cách thoát khỏi container, họ cũng không có quyền root trên máy host.
 
 ---
 
@@ -85,7 +90,8 @@ Vì sao 401 phải kèm header `WWW-Authenticate: Bearer`? Và vì sao ta trả 
 một** thông báo lỗi cho cả ba trường hợp (thiếu header, sai scheme, sai token)
 thay vì nói rõ sai ở đâu cho người dùng dễ sửa?
 
-> *Câu trả lời của bạn*
+- **Header `WWW-Authenticate: Bearer`**: Theo chuẩn RFC 6750 / HTTP spec, response 401 Unauthorized bắt buộc phải kèm header này để chỉ dẫn cho client/HTTP agent biết phương thức xác thực được chấp nhận ở endpoint này là gì (Bearer scheme).
+- **Trả cùng một thông báo lỗi**: Nhằm tránh rò rỉ thông tin (Information Leakage). Phản hồi chi tiết (ví dụ: "sai token") vô tình xác nhận cho kẻ tấn công biết rằng header và scheme đã đúng, giúp họ thu hẹp phạm vi thử sai khi dò quét / brute-force token. Trả cùng một thông báo giúp bảo mật theo nguyên tắc blind error.
 
 ---
 
@@ -95,7 +101,8 @@ Với `capacity=10`, `refill_per_minute=10`: một client im lặng 10 phút r�
 liên tiếp. Nó gửi được bao nhiêu request trước khi bị 429? Nếu bỏ đoạn
 `min(capacity, ...)` trong `available()` thì con số đó thành bao nhiêu, và tại sao?
 
-> *Câu trả lời của bạn*
+- **Số request gửi được**: Tối đa **10 request** trước khi nhận lỗi 429. Dù im lặng 10 phút, sức chứa tối đa (`capacity`) của xô chỉ là 10 token.
+- **Nếu bỏ `min(capacity, ...)`**: Sau 10 phút im lặng, lượng token nạp thêm là $10 \times 10 = 100$ token. Không có `min()`, xô sẽ tích lũy thành **100 token** (hoặc 110 token). Khi đó client có thể xả liên tục **100 request** trong 1 giây mà không bị chặn, làm mất đi khả năng kiểm soát burst traffic của Rate Limiter.
 
 ---
 
@@ -105,7 +112,13 @@ So sánh hạn mức $30/tháng với hạn mức $1/ngày cho cùng một clien
 cố khiến một client gọi liên tục từ 2h sáng. Với mỗi cách, thiệt hại tối đa là
 bao nhiêu và service tự hồi phục khi nào?
 
-> *Câu trả lời của bạn*
+- **Hạn mức $30/tháng**:
+  - Thiệt hại tối đa: Có thể tiêu sạch toàn bộ **$30** chỉ trong vài giờ đầu tiên của sự cố.
+  - Tự hồi phục: Phải chờ đến **đầu tháng tiếp theo** service mới mở lại tự động.
+- **Hạn mức $1/ngày**:
+  - Thiệt hại tối đa: Giới hạn tổn thất tối đa chỉ **$1** cho sự cố trong ngày.
+  - Tự hồi phục: Ngay **00:00 UTC ngày tiếp theo**, nhãn ngày mới được tạo và service tự động hồi phục phục vụ trở lại.
+
 
 ---
 
