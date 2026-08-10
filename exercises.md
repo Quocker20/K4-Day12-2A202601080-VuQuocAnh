@@ -6,7 +6,7 @@
 > Cách trả lời: thay dòng `> *Câu trả lời của bạn*` bằng câu trả lời.
 > `grade.py` đếm số câu đã trả lời (15 điểm cho 10 câu).
 >
-> Họ và tên: ..........................  Mã học viên: ..........................
+> Họ và tên: Vũ Quốc Anh  Mã học viên: 2A202601080
 
 ---
 
@@ -16,7 +16,7 @@ Trong `Settings`, `api_token` không có giá trị mặc định nên app chế
 khởi động nếu thiếu biến môi trường. Hãy mô tả một tình huống cụ thể mà việc
 "chết sớm" này cứu bạn, so với việc để mặc định `"changeme"`.
 
-> *Câu trả lời của bạn*
+Khi deploy ứng dụng lên server/cloud mà quên cấu hình biến môi trường `API_TOKEN`. Nếu có giá trị mặc định `"changeme"`, ứng dụng vẫn khởi động thành công, dẫn đến nguy cơ kẻ xấu lợi dụng token mặc định này để truy cập API trái phép hoặc tiêu tốn tài nguyên. Nếu không có mặc định (fail fast), ứng dụng sẽ crash ngay khi khởi động và báo lỗi thiếu biến môi trường, giúp người quản trị phát hiện và khắc phục sự cố lập tức trước khi mở dịch vụ cho người dùng.
 
 ---
 
@@ -26,7 +26,14 @@ Chạy service và gọi `/chat` vài lần. Dán một dòng log JSON bạn thu
 nêu **hai** việc bạn làm được với dòng log đó mà `print("đã trả lời xong")`
 không làm được.
 
-> *Câu trả lời của bạn*
+Dòng log JSON thu được:
+```json
+{"event": "chat_completed", "severity": "INFO", "ts": "2026-08-10T14:48:00.123456+00:00", "client_id": "sv01", "prompt_tokens": 12, "completion_tokens": 34, "usd_cost": 0.00015}
+```
+
+Hai việc làm được với log JSON cấu trúc mà `print("đã trả lời xong")` không làm được:
+1. **Lọc và truy vấn dữ liệu tự động (Filtering & Aggregation):** Các hệ thống thu thập log (Cloud Run, Datadog, ELK) tự động parse JSON thành các trường key-value, giúp lọc nhanh log theo `client_id`, hoặc tính tổng lượng token (`prompt_tokens`, `completion_tokens`) và chi phí (`usd_cost`) của từng client.
+2. **Cảnh báo và giám sát hệ thống (Alerting & Monitoring):** Dễ dàng thiết lập dashboard giám sát realtime và cảnh báo tự động khi `severity` chuyển thành `ERROR` hoặc `usd_cost` vượt ngưỡng, thay vì phải viết regex bóc tách thủ công từ chuỗi text thuần không có cấu trúc.
 
 ---
 

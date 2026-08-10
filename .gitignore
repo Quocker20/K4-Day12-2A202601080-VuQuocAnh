@@ -11,6 +11,7 @@ venv/
 env/
 .pytest_cache/
 *.egg-info/
+.env
 
 # OS / editor
 .DS_Store
@@ -26,3 +27,5 @@ solution/
 
 # Tài liệu nội bộ của giảng viên — không đẩy lên repo phát cho học viên
 solution/
+
+.agents/
