@@ -127,7 +127,11 @@ bao nhiêu và service tự hồi phục khi nào?
 Nếu gộp hai endpoint làm một và cho nó kiểm tra Redis, chuyện gì xảy ra với cụm
 3 container khi Redis mất kết nối 30 giây? Trả lời theo đúng thứ tự sự kiện.
 
-> *Câu trả lời của bạn*
+- **Thứ tự sự kiện xảy ra**:
+  1. **Liveness probe đồng loạt thất bại:** Do `/healthz` bị gộp và phụ thuộc vào Redis, khi Redis mất kết nối 30 giây, cả 3 container đều phản hồi lỗi 503 hoặc timeout trên endpoint này.
+  2. **Container bị restart liên hoàn:** Orchestrator (Docker/Kubernetes) lầm tưởng tiến trình bên trong container bị crash hoặc deadlock, lập tức ra lệnh restart hàng loạt cả 3 container.
+  3. **Gây ra downtime toàn diện (Cascading Failure):** Trong suốt 30 giây đó (và cả thời gian khởi động lại sau đó), toàn bộ hệ thống sập hoàn toàn, không thể xử lý bất kỳ request nào. Thay vì chỉ tạm ngưng nhận traffic mới (nhờ `/readyz` báo bận) và tự phục hồi khi Redis kết nối lại, việc gộp làm một đã biến sự cố gián đoạn của DB thành sự cố sập toàn bộ ứng dụng.
+
 
 ---
 

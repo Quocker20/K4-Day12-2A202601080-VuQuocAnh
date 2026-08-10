@@ -45,35 +45,29 @@ class ChatStore:
         return f"chat:{client_id}"
 
     def ping(self) -> bool:
-        """Redis có trả lời không? Dùng cho endpoint /readyz.
-
-        TODO (CP4): gọi ``self.client.ping()`` trong try/except.
-        Trả ``True`` nếu thành công, ``False`` nếu có bất kỳ Exception nào
-        (mất mạng, sai mật khẩu, Redis chưa khởi động...).
-        """
-        raise NotImplementedError("TODO (CP4): cài đặt ping")
+        try:
+            return bool(self.client.ping())
+        except Exception:
+            return False
 
     def add_turn(self, client_id: str, role: str, content: str) -> None:
-        """Ghi thêm một lượt vào lịch sử.
-
-        TODO (CP4):
-          1. ``self.client.rpush(key, json.dumps({"role": role, "content": content},
-             ensure_ascii=False))``
-          2. ``self.client.ltrim(key, -HISTORY_MAX_MESSAGES, -1)`` — chỉ giữ
-             ``HISTORY_MAX_MESSAGES`` message gần nhất, nếu không prompt sẽ
-             phình vô hạn và tiền token cũng vậy.
-          3. ``self.client.expire(key, HISTORY_TTL_SECONDS)`` — hội thoại cũ
-             tự hết hạn, khỏi phải dọn tay.
-        """
-        raise NotImplementedError("TODO (CP4): cài đặt add_turn")
+        key = self._key(client_id)
+        val = json.dumps({"role": role, "content": content}, ensure_ascii=False)
+        self.client.rpush(key, val)
+        self.client.ltrim(key, -HISTORY_MAX_MESSAGES, -1)
+        self.client.expire(key, HISTORY_TTL_SECONDS)
 
     def history(self, client_id: str) -> list[dict]:
-        """Đọc lịch sử hội thoại, cũ nhất trước.
+        key = self._key(client_id)
+        elements = self.client.lrange(key, 0, -1)
+        if not elements:
+            return []
+        decoded = []
+        for el in elements:
+            val = el.decode("utf-8") if isinstance(el, bytes) else el
+            decoded.append(json.loads(val))
+        return decoded
 
-        TODO (CP4): ``self.client.lrange(key, 0, -1)`` rồi ``json.loads``
-        từng phần tử. Chưa có gì → trả về list rỗng.
-        """
-        raise NotImplementedError("TODO (CP4): cài đặt history")
 
     def reset(self, client_id: str) -> None:
         """CHO SẴN — xóa lịch sử của một client."""
