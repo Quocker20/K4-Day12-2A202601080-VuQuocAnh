@@ -49,12 +49,13 @@ docker images | grep chat
 
 | Bản | Dung lượng |
 |-----|-----------|
-| 1 stage (bản đầu) | ... MB |
-| Multi-stage | ... MB |
+| 1 stage (bản đầu) | ~1.01 GB (~1010 MB) |
+| Multi-stage | ~378 MB |
 
-Giải thích: phần dung lượng chênh lệch đó là những gì?
+Giải thích: Phần dung lượng chênh lệch (~630 MB) bao gồm:
+1. **Khác biệt về Base Image:** Image `python:3.11` đầy đủ chứa hệ điều hành Debian hoàn chỉnh kèm toàn bộ công cụ biên dịch (GCC, g++, make), thư viện C/C++ header (`-dev`), git, curl và nhiều tiện ích hệ thống không cần thiết ở runtime. Ngược lại, `python:3.11-slim` đã được giản lược tối đa chỉ giữ lại môi trường chạy Python tối thiểu.
+2. **Kỹ thuật Multi-stage Build:** Ở stage `builder`, các tệp tạm, pip cache và công cụ build phát sinh trong quá trình cài đặt thư viện đều bị bỏ lại ở stage đầu. Stage runtime cuối cùng chỉ sao chép kết quả `site-packages` đã cài xong, giúp hình ảnh không bị tích tụ rác và các layer dư thừa.
 
-> *Câu trả lời của bạn*
 
 ---
 

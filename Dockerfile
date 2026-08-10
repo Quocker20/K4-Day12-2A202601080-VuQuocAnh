@@ -23,14 +23,33 @@
 #            docker images day12-chat:prod     # xem dung lượng
 # ═══════════════════════════════════════════════════════════════════
 
-FROM python:3.11
+# Stage 1: Builder
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Stage 2: Runtime
+FROM python:3.11-slim
+
+
+WORKDIR /app
+
+RUN useradd -m appuser
+
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
 COPY . .
 
-RUN pip install -r requirements.txt
+USER appuser
 
 EXPOSE 8000
 
+HEALTHCHECK --interval=30s --timeout=3s CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')" || exit 1
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
