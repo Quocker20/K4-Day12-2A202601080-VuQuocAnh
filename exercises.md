@@ -3,7 +3,7 @@
 > **Bài làm cá nhân.** Trả lời bằng lời của chính bạn, dựa trên những gì bạn
 > quan sát được khi chạy code — không sao chép đáp án của người khác.
 >
-> Cách trả lời: thay dòng `> *Câu trả lời của bạn*` bằng câu trả lời.
+> Cách trả lời: thay dòng hướng dẫn bằng câu trả lời của bạn.
 > `grade.py` đếm số câu đã trả lời (15 điểm cho 10 câu).
 >
 > Họ và tên: Vũ Quốc Anh  Mã học viên: 2A202601080
@@ -141,4 +141,7 @@ Ghi lại **một** lỗi bạn gặp khi deploy lên cloud (build fail, health 
 timeout, sai REDIS_URL, app không đọc `$PORT`...): thông báo lỗi là gì, bạn
 tìm ra nguyên nhân bằng cách nào, và sửa ra sao?
 
-> *Câu trả lời của bạn*
+- **Lỗi gặp phải**: Khi vừa deploy ứng dụng lên Render, gọi endpoint `/readyz` bị trả về mã lỗi HTTP `503 Service Unavailable` kèm response `{"status": "not ready", "redis": false}`.
+- **Cách tìm ra nguyên nhân**: Gọi thử lệnh `curl.exe -i <URL>/readyz` và quan sát response. Nhận thấy `/healthz` vẫn trả 200 OK nhưng `/readyz` lại trả 503, kết hợp đọc log trên Dashboard của Render thấy thông báo không kết nối được tới Redis do `REDIS_URL` đang nhận giá trị mặc định `localhost`.
+- **Cách sửa**: Tạo một instance Redis (Key-Value) trên Render, sao chép chuỗi **Internal Redis URL** (dạng `redis://red-xxxxxxxx:6379`), sau đó truy cập tab Environment của Web Service trên Render Dashboard để khai báo biến `REDIS_URL` bằng giá trị vừa chép rồi bấm Save Changes để service tự động redeploy lại.
+
